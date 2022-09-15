@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sysprep-config-vm
+  namespace: default
+data:
+  foo: bar

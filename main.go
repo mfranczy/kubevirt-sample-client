@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	kv1 "kubevirt.io/api/core/v1"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,7 +20,7 @@ import (
 func createConfigMap(ctx context.Context, client ctrlclient.Client) (*corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cm",
+			Name:      "sysprep-config-vm",
 			Namespace: "default",
 		},
 		Data: map[string]string{
@@ -103,10 +104,69 @@ func createVM(ctx context.Context, client ctrlclient.Client, cmName string) erro
 	return client.Create(ctx, &vm)
 }
 
+func createCMFromYaml(ctx context.Context, client ctrlclient.Client, yamlPath string) error {
+	cm := &corev1.ConfigMap{}
+
+	f, err := os.Open(yamlPath)
+	if err != nil {
+		return err
+	}
+
+	if err = yaml.NewYAMLToJSONDecoder(f).Decode(cm); err != nil {
+		return err
+	}
+
+	if err = client.Create(ctx, cm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createVMFromYaml(ctx context.Context, client ctrlclient.Client, yamlPath string) error {
+	vm := &kv1.VirtualMachine{}
+
+	f, err := os.Open(yamlPath)
+	if err != nil {
+		return err
+	}
+
+	if err = yaml.NewYAMLToJSONDecoder(f).Decode(vm); err != nil {
+		return err
+	}
+
+	if err = client.Create(ctx, vm); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createSvcFromYaml(ctx context.Context, client ctrlclient.Client, yamlPath string) error {
+	svc := &corev1.Service{}
+
+	f, err := os.Open(yamlPath)
+	if err != nil {
+		return err
+	}
+
+	if err = yaml.NewYAMLToJSONDecoder(f).Decode(svc); err != nil {
+		return err
+	}
+
+	if err = client.Create(ctx, svc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	kv1.AddToScheme(scheme)
+
+	ctx := context.TODO()
 
 	// controller-runtime already registers a kubeconfig flag in the init function
 	restConfig := ctrl.GetConfigOrDie()
@@ -118,16 +178,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	cm, err := createConfigMap(context.TODO(), client)
-	if err != nil {
+	if err = createCMFromYaml(ctx, client, "cm.yaml"); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println("Config Map created")
+	fmt.Println("Config map created")
 
-	if err = createVM(context.TODO(), client, cm.Name); err != nil {
+	if err = createVMFromYaml(ctx, client, "vm.yaml"); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	fmt.Println("Virtual Machine created")
+
+	if err = createSvcFromYaml(ctx, client, "svc.yaml"); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println("Service created")
+
+	// The below code creates k8s/kubevirt resources based on the created resource structure in code
+
+	//_, err = createConfigMap(ctx, client)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	os.Exit(1)
+	//}
+
+	//if err = createVM(ctx, client, cm.Name); err != nil {
+	//	fmt.Println(err)
+	//	os.Exit(1)
+	//}
 }

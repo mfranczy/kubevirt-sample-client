@@ -1,0 +1,120 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: win11-vm-00019
+  namespace: default
+spec:
+  running: true
+  dataVolumeTemplates:
+    - apiVersion: cdi.kubevirt.io/v1beta1
+      kind: DataVolume
+      metadata:
+        name: win11-vm-00019
+      spec:
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 128Gi
+          # storageClassName: local-path
+        source:
+          pvc:
+            name: template-win11-21-h2-v1-22-07-2022-d2926315
+            namespace: default
+  template:
+    metadata:
+      labels:
+        app: win11-vm-00019
+    spec:
+      domain:
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          cores: 4
+          sockets: 2
+          threads: 1
+          # dedicatedCpuPlacement: true
+        devices:
+          # networkInterfaceMultiqueue: true
+          disks:
+          - bootOrder: 1
+            disk:
+              bus: virtio
+            name: win11-disk
+          - name: sysprep
+            cdrom:
+              bus: sata
+          interfaces:
+          - name: default
+            bridge: {}
+            model: virtio
+
+
+          tpm: {}
+
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: true
+
+        features:
+          smm:
+            enabled: true
+          acpi:
+            enabled: true
+          apic:
+            enabled: true
+          hyperv:
+            frequencies:
+              enabled: true
+            ipi:
+              enabled: true
+            reenlightenment:
+              enabled: true
+            relaxed:
+              enabled: true
+            reset:
+              enabled: true
+            runtime:
+              enabled: true
+            spinlocks:
+              enabled: true
+              spinlocks: 8191
+            synic:
+              enabled: true
+            synictimer:
+              direct:
+                enabled: true
+              enabled: true
+            tlbflush:
+              enabled: true
+            vapic:
+              enabled: true
+            vpindex:
+              enabled: true
+
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: 16G
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: win11-disk
+        dataVolume:
+          name: win11-vm-00019
+      - name: sysprep
+        sysprep:
+          configMap:
+            name: sysprep-config-vm
